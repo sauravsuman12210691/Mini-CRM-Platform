@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -17,19 +18,27 @@ connectDB();
 // Initialize Express app
 const app = express();
 
-// Session middleware
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your_secret_key',
-  resave: false,
-  saveUninitialized: false,
-}));
+
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'your_secret_key',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions',
+    }),
+  })
+);
+
 
 // Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
 // CORS and JSON parsing
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: process.env.CORS, credentials: true }));
 app.use(express.json());
 
 // Passport Google OAuth strategy
