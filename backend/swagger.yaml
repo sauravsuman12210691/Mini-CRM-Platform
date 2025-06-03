@@ -1,0 +1,70 @@
+openapi: 3.0.0
+info:
+  title: CRM API
+  version: 1.0.0
+paths:
+  /api/customers:
+    post:
+      summary: Create a customer (async ingestion)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '202':
+          description: Accepted for processing
+  /api/orders:
+    post:
+      summary: Create an order (async ingestion)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '202':
+          description: Accepted for processing
+components:
+  schemas:
+    Customer:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        totalSpend:
+          type: number
+        visitCount:
+          type: integer
+        lastActive:
+          type: string
+          format: date-time
+    Order:
+      type: object
+      required:
+        - customerId
+        - amount
+      properties:
+        customerId:
+          type: string
+        amount:
+          type: number
+        orderDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - pending
+            - completed
+            - cancelled

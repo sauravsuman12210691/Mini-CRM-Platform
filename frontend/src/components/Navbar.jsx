@@ -10,6 +10,12 @@ export default function Navbar() {
         <Link to="/campaigns" className="hover:underline">Campaigns</Link>
         <Link to="/segments" className="hover:underline">Segments</Link>
       </div>
+      <button
+        onClick={handleLogout}
+        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+      >
+        Logout
+      </button>
     </nav>
   );
 }

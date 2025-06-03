@@ -18,8 +18,11 @@ connectDB();
 // Initialize Express app
 const app = express();
 
+// CORS and JSON parsing — do this early
+app.use(cors({ origin: process.env.CORS, credentials: true }));
+app.use(express.json());
 
-
+// Session setup
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'your_secret_key',
@@ -32,47 +35,59 @@ app.use(
   })
 );
 
-
 // Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
-// CORS and JSON parsing
-app.use(cors({ origin: process.env.CORS, credentials: true }));
-app.use(express.json());
-
 // Passport Google OAuth strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: '/auth/google/callback',
-},
-async (accessToken, refreshToken, profile, done) => {
-  try {
-    const existingUser = await User.findOne({ googleId: profile.id });
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: `${process.env.BASE_URL}/auth/google/callback`,
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const existingUser = await User.findOne({ googleId: profile.id });
 
-    if (existingUser) {
-      return done(null, existingUser);
+        if (existingUser) {
+          return done(null, existingUser);
+        }
+
+        const newUser = await User.create({
+          googleId: profile.id,
+          displayName: profile.displayName,
+          email: profile.emails[0].value,
+          photo: profile.photos[0].value,
+        });
+
+        done(null, newUser);
+      } catch (err) {
+        done(err, null);
+      }
     }
+  )
+);
 
-    const newUser = await User.create({
-      googleId: profile.id,
-      displayName: profile.displayName,
-      email: profile.emails[0].value,
-      photo: profile.photos[0].value,
-    });
+passport.serializeUser((user, done) => done(null, user.id));
 
-    done(null, newUser);
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
   } catch (err) {
-    done(err, null);
+    done(err);
   }
-}));
+});
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+// API routes
+app.use('/api', require('./routes/api'));
 
-// Routes
-app.use('/auth', require('./routes/authRoutes')); // Google login/logout
+// Auth routes (Google login/logout)
+app.use('/auth', require('./routes/authRoutes'));
+
+// Protected routes
 app.use('/api/customers', ensureAuth, require('./routes/customerRoutes'));
 app.use('/api/orders', ensureAuth, require('./routes/orderRoutes'));
 app.use('/api/campaigns', ensureAuth, require('./routes/campaignRoutes'));

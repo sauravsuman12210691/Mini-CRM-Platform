@@ -7,27 +7,31 @@ router.get('/google', passport.authenticate('google', {
   scope: ['profile', 'email']
 }));
 
-// Google OAuth callback
-router.get('/google/callback', passport.authenticate('google', {
-  failureRedirect: '/auth/failure',
-  successRedirect: '/auth/success',
-}));
+// Google OAuth callback - no redirect, just JSON response
+router.get('/google/callback',
+  (req, res, next) => {
+    passport.authenticate('google', { session: true }, (err, user, info) => {
+      if (err) return next(err);
+      if (!user) {
+        return res.status(401).json({ status: 'error', message: 'Authentication failed' });
+      }
+      req.logIn(user, err => {
+        if (err) return next(err);
+        return res.json({ status: 'success', message: 'Login successful', user });
+      });
+    })(req, res, next);
+  }
+);
 
-router.get('/success', (req, res) => {
-  res.json({ message: 'Login successful', user: req.user });
-});
-
-router.get('/failure', (req, res) => {
-  res.status(401).json({ message: 'Login failed' });
-});
-
-// Logout
-router.get('/logout', (req, res) => {
-  req.logout(() => {
+// Logout route
+router.get('/logout', (req, res, next) => {
+  req.logout(err => {
+    if (err) return next(err);
     res.json({ message: 'Logged out' });
   });
 });
-//check session
+
+// Check session route
 router.get('/check-session', (req, res) => {
   if (req.isAuthenticated()) {
     res.json({
